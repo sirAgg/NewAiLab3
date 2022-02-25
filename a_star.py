@@ -1,4 +1,4 @@
-import numpy
+import numpy, pygame
 #import demo, nmath
 import time
 import math
@@ -14,6 +14,23 @@ class Path:
         self.start_pos = start_pos
         self.goal_pos  = goal_pos
         self.is_done = False
+
+def check_neighbour(board, x, y, n_x, n_y):
+        sx = x+n_x
+        sy = y+n_y
+        if board[sx][sy] in "BV":
+            return False
+        
+        if n_x == 0 or n_y == 0:
+            return True
+        
+        if board[x][sy] in "BV":
+            return False
+        
+        if board[sx][y] in "BV":
+            return False
+
+        return True
 
 def is_at(current_pos, goal_pos):
     return abs(current_pos[0] - goal_pos[0]) < 0.1 and abs(current_pos[1] - goal_pos[1]) < 0.1
@@ -39,10 +56,10 @@ class AStar:
         self.open = []
         self.closed = []
         self.open.append(path.start_pos)
-        self.f_values = numpy.zeros((game_map.width, game_map.height), dtype=numpy.float)
-        self.f_values[int(path.start_pos[0])][int(path.start_pos[1])] = AStar.diagonal_dist(game_map.goal_pos, path.start_pos)
-        self.g_values = numpy.zeros((game_map.width, game_map.height), dtype=numpy.float)
-        self.parents = numpy.zeros((game_map.width, game_map.height), dtype=numpy.dtype((numpy.int,2)))
+        self.f_values = numpy.zeros((board_w, board_h), dtype=numpy.float)
+        self.f_values[int(path.start_pos[0])][int(path.start_pos[1])] = AStar.diagonal_dist(path.goal_pos, path.start_pos)
+        self.g_values = numpy.zeros((board_w, board_h), dtype=numpy.float)
+        self.parents = numpy.zeros((board_w, board_h), dtype=numpy.dtype((numpy.int,2)))
         self.parents[int(path.start_pos[0])][int(path.start_pos[1])] = (-1,-1)
         self.iteration = 0
 
@@ -56,7 +73,7 @@ class AStar:
             pos = list((int(current_pos[0]),int(current_pos[1])))
 
             while pos[0] > 0:
-                reverse_path.append(nmath.Float2(pos[0], pos[1]))
+                reverse_path.append(pos)
                 pos = self.parents[pos[0]][pos[1]]
 
             path.points = reverse_path
@@ -69,7 +86,7 @@ class AStar:
 
 
         for n in neighbours:
-            if not game_map.check_neighbour(int(current_pos[0]), int(current_pos[1]), n[0], n[1]):
+            if not check_neighbour(game_map, int(current_pos[0]), int(current_pos[1]), n[0], n[1]):
                 continue
             p = (current_pos[0] + n[0], current_pos[1] + n[1])
             
@@ -83,11 +100,9 @@ class AStar:
             else:
                 g_value = 1.4
 
-            tiletype = map.TileTypes.type(game_map.get(int(p[0]), int(p[1])))
-
-            if tiletype == map.TileTypes.type(map.TileTypes.TREE):
+            if game_map[p[0]][p[1]] == "T":
                 g_value *= 1.5
-            elif tiletype == map.TileTypes.type(map.TileTypes.QUAGMIRE):
+            if game_map[p[0]][p[1]] == "G":
                 g_value *= 2
 
             g_value += current_g_value
@@ -99,8 +114,9 @@ class AStar:
                 self.f_values[int(p[0])][int(p[1])] = f_value
                 self.g_values[int(p[0])][int(p[1])] = g_value
                 if prev_g_value <= 0:
-                    self.parents[int(p[0])][int(p[1])] = (int(current_pos[0]), int(current_pos[1]))
-                    self.open.append(p)
+                    if self.parents[int(p[0])][int(p[1])][0] != -1:
+                        self.parents[int(p[0])][int(p[1])] = (int(current_pos[0]), int(current_pos[1]))
+                        self.open.append(p)
 
         self.closed.append(current_pos)
 
@@ -113,34 +129,43 @@ class AStar:
         return "A*"
 
 
-#    def visualize(self, path):
-#        shape = self.f_values.shape
-#
-#        max_f = self.f_values[0][0]
-#        for x in range(shape[0]):
-#            for y in range(shape[1]):
-#                if self.f_values[x][y] > max_f:
-#                    max_f = self.f_values[x][y]
-#
-#        
-#        for o in self.closed:
-#            parent = self.parents[int(o[0])][int(o[1])]
-#            demo.DrawLine(nmath.Point(o[0], 0.1, o[1]), nmath.Point(parent[0], 0.1, parent[1]), 4.0, nmath.Vec4(1,1,0,1))
-#        
-#        for o in self.open:
-#            parent = self.parents[int(o[0])][int(o[1])]
-#            demo.DrawLine(nmath.Point(o[0], 0.1, o[1]), nmath.Point(parent[0], 0.1, parent[1]), 4.0, nmath.Vec4(1,1,0,1))
-#
-#
-#        for o in self.closed:
-#            demo.DrawDot(nmath.Point(o[0],0.1,o[1]), 10, nmath.Vec4(0,0,1,1))
-#            
-#        for o in self.open:
-#            f = self.f_values[int(o[0])][int(o[1])]
-#            demo.DrawDot(nmath.Point(o[0],0.1,o[1]), 10, nmath.Vec4(0,f/max_f,0,1))
-#            
-#
-#        prev_p = path.start_pos
-#        for p in path.points:
-#            demo.DrawLine(nmath.Point(p[0], 0.1, p[1]), nmath.Point(prev_p[0], 0.1, prev_p[1]), 4.0, nmath.Vec4(1,0,0,1))
-#            prev_p = p
+    def visualize(self, path, surface):
+        shape = self.f_values.shape
+
+        def fix(p):
+            return (p[0]*8+4, p[1]*8+4)
+
+        max_f = self.f_values[0][0]
+        for x in range(shape[0]):
+            for y in range(shape[1]):
+                if self.f_values[x][y] > max_f:
+                    max_f = self.f_values[x][y]
+
+        
+        for o in self.closed:
+            parent = self.parents[int(o[0])][int(o[1])]
+            #demo.DrawLine(nmath.Point(o[0], 0.1, o[1]), nmath.Point(parent[0], 0.1, parent[1]), 4.0, nmath.Vec4(1,1,0,1))
+            pygame.draw.line(surface, (255,255,0), fix(o), fix(parent))
+
+        
+        for o in self.open:
+            parent = self.parents[int(o[0])][int(o[1])]
+            #demo.DrawLine(nmath.Point(o[0], 0.1, o[1]), nmath.Point(parent[0], 0.1, parent[1]), 4.0, nmath.Vec4(1,1,0,1))
+            pygame.draw.line(surface, (255,255,0), fix(o), fix(parent))
+
+
+        for o in self.closed:
+            #demo.DrawDot(nmath.Point(o[0],0.1,o[1]), 10, nmath.Vec4(0,0,1,1))
+            pygame.draw.circle(surface, (0,0,255), fix(o), 2)
+            
+        for o in self.open:
+            f = self.f_values[int(o[0])][int(o[1])]
+            #demo.DrawDot(nmath.Point(o[0],0.1,o[1]), 10, nmath.Vec4(0,f/max_f,0,1))
+            pygame.draw.circle(surface, (0,f/max_f * 255,0), fix(o), 2)
+            
+
+        prev_p = path.start_pos
+        for p in path.points:
+            #demo.DrawLine(nmath.Point(p[0], 0.1, p[1]), nmath.Point(prev_p[0], 0.1, prev_p[1]), 4.0, nmath.Vec4(1,0,0,1))
+            pygame.draw.line(surface, (255,0,0), fix(p), fix(prev_p))
+            prev_p = p

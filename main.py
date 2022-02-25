@@ -25,13 +25,15 @@ timer = pygame.time.Clock()
 window = pygame.display.set_mode( (board_w*8, board_h*8))
 pygame.display.set_caption("Ai lab 3")
 
-a = agent.Agent()
+a = agent.Agent(board)
 
 done = False
 while not done:
     for event in pygame.event.get():
         if event.type == QUIT:
             done = True
+        if event.type == KEYDOWN:
+            pass 
 
     window.fill((0,0,0))
         
@@ -48,7 +50,9 @@ while not done:
             else:
                 pygame.draw.rect(window, (22,168,0), pygame.Rect(x*8,y*8,8,8))
 
+    a.update()
+
     a.draw(window)
 
     pygame.display.update()
-    timer.tick(60)
+    timer.tick(30)
