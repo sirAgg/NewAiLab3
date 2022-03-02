@@ -18,16 +18,16 @@ class Path:
 def check_neighbour(board, x, y, n_x, n_y):
         sx = x+n_x
         sy = y+n_y
-        if board[sx][sy] in "BV":
+        if board[sx][sy][0] in "BV" or board[sx][sy][1]:
             return False
         
         if n_x == 0 or n_y == 0:
             return True
         
-        if board[x][sy] in "BV":
+        if board[x][sy][0] in "BV" or board[x][sy][1]:
             return False
         
-        if board[sx][y] in "BV":
+        if board[sx][y][0] in "BV" or board[sx][y][1]:
             return False
 
         return True
@@ -65,7 +65,7 @@ class AStar:
 
     def step(self, path, game_map):
         self.iteration += 1
-        print(self.iteration)
+        #print(self.iteration)
         current_pos = self.open.pop(0)
 
         if is_at(current_pos, path.goal_pos):
@@ -100,9 +100,9 @@ class AStar:
             else:
                 g_value = 1.4
 
-            if game_map[p[0]][p[1]] == "T":
-                g_value *= 1.5
-            if game_map[p[0]][p[1]] == "G":
+            #if game_map[int(p[0])][int(p[1])][0] == "T":
+            #    g_value *= 1.5
+            if game_map[int(p[0])][int(p[1])][0] == "G":
                 g_value *= 2
 
             g_value += current_g_value
@@ -129,7 +129,7 @@ class AStar:
         return "A*"
 
 
-    def visualize(self, path, surface):
+    def visualize(self, surface):
         shape = self.f_values.shape
 
         def fix(p):
@@ -164,8 +164,8 @@ class AStar:
             pygame.draw.circle(surface, (0,f/max_f * 255,0), fix(o), 2)
             
 
-        prev_p = path.start_pos
-        for p in path.points:
-            #demo.DrawLine(nmath.Point(p[0], 0.1, p[1]), nmath.Point(prev_p[0], 0.1, prev_p[1]), 4.0, nmath.Vec4(1,0,0,1))
-            pygame.draw.line(surface, (255,0,0), fix(p), fix(prev_p))
-            prev_p = p
+        #prev_p = path.start_pos
+        #for p in path.points:
+        #    #demo.DrawLine(nmath.Point(p[0], 0.1, p[1]), nmath.Point(prev_p[0], 0.1, prev_p[1]), 4.0, nmath.Vec4(1,0,0,1))
+        #    pygame.draw.line(surface, (255,0,0), fix(p), fix(prev_p))
+        #    prev_p = p
