@@ -36,4 +36,4 @@ class Scout:
 
     def draw(self, surface):
         self.agent.draw(surface, (255,255,0,0));
-        pygame.draw.circle(surface, (255,0,0), (self.goal_pos[0]*8, self.goal_pos[1]*8), 3)
+        #pygame.draw.circle(surface, (255,0,0), (self.goal_pos[0]*8, self.goal_pos[1]*8), 3)
